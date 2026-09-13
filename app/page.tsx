@@ -1,6 +1,6 @@
 "use client"
 
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
+import { Show, SignInButton, SignUpButton, UserButton, OrganizationSwitcher } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -13,7 +13,10 @@ export default function Page() {
           <SignUpButton />
         </Show>
         <Show when="signed-in">
-          <UserButton />
+          <div className="flex flex-col items-end gap-3">
+            <UserButton />
+            <OrganizationSwitcher hidePersonal />
+          </div>
         </Show>
       </header>
       <main className="flex flex-1 items-start p-6">
