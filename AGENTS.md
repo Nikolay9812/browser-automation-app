@@ -5,6 +5,13 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# JSX text escaping
+
+Escape apostrophes and quotes in JSX text content — raw `'` and `"` trip the
+`react/no-unescaped-entities` lint rule. Use `&apos;` for apostrophes and
+`&quot;` for quotes (e.g. `you&apos;re`, `doesn&apos;t`). This applies only to
+literal text between JSX tags, not to string attribute values or JS strings.
+
 # Database types
 
 Derive database types from the Drizzle schema — never hand-write custom or partial
