@@ -39,7 +39,7 @@ export function RightSidebar() {
   }
 
   return (
-    <div className="flex size-full flex-col gap-3 p-2">
+    <div className="flex size-full items-center justify-center flex-col gap-3 p-2">
       <Button onClick={handleRun} disabled={isRunning}>
         {isRunning ? <Spinner /> : <PlayIcon />}
         Run
