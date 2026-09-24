@@ -9,9 +9,9 @@ import {
   SidebarHeader,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { createWorkflowAction } from "@/feature/workflows/actions"
-import { WorkflowNav } from "@/feature/workflows/components/workflow-nav"
-import { listWorkflows } from "@/feature/workflows/data"
+import { createWorkflowAction } from "@/features/workflows/actions"
+import { WorkflowNav } from "@/features/workflows/components/workflow-nav"
+import { listWorkflows } from "@/features/workflows/data"
 
 export async function AppSidebar({
   ...props

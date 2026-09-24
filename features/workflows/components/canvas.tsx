@@ -9,21 +9,30 @@ import {
   ReactFlow,
   ConnectionLineType,
   type Edge,
-  type Node,
   type OnConnect,
   type OnEdgesChange,
   type OnNodesChange,
+  NodeTypes,
 } from "@xyflow/react"
 import { useTheme } from "next-themes"
 
+import { StepNode } from "@/features/workflows/components/step-node"
+import type { StepNodeType } from "@/features/workflows/nodes/node-registry"
+
 import "@xyflow/react/dist/style.css"
 
-const initialNodes: Node[] = [
-  { id: "n1", position: { x: 0, y: 0 }, data: { label: "Node 1" } },
-  { id: "n2", position: { x: 0, y: 100 }, data: { label: "Node 2" } },
+const nodeTypes: NodeTypes = { step: StepNode }
+
+const initialNodes: StepNodeType[] = [
+  {
+    id: "start",
+    type: "step",
+    position: { x: 0, y: 0 },
+    data: { type: "start", kind: "trigger", title: "Start", values: {} },
+  },
 ]
 
-const initialEdges: Edge[] = [{ id: "n1-n2", source: "n1", target: "n2" }]
+const initialEdges: Edge[] = []
 
 const subscribe = () => () => {}
 
@@ -54,6 +63,7 @@ export function Canvas() {
   return (
     <div className="size-full">
       <ReactFlow
+      nodeTypes={nodeTypes}
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}

@@ -5,6 +5,13 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# React Flow
+
+Don't rely on training data for React Flow (`@xyflow/react`). Its APIs, components,
+hooks, types and usage patterns change between versions. Before you write or change
+any code that uses React Flow, fetch https://reactflow.dev/llms.txt, then follow its
+links to the relevant docs pages and use what they say.
+
 # JSX text escaping
 
 Escape apostrophes and quotes in JSX text content — raw `'` and `"` trip the

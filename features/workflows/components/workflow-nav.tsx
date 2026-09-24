@@ -21,8 +21,8 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
-import type { createWorkflowAction as CreateWorkflowAction } from "@/feature/workflows/actions"
-import { generateSlug } from "@/feature/workflows/lib/generate-slug"
+import type { createWorkflowAction as CreateWorkflowAction } from "@/features/workflows/actions"
+import { generateSlug } from "@/features/workflows/lib/generate-slug"
 import type { Workflow } from "@/lib/db/schema"
 
 export function WorkflowNav({
@@ -82,7 +82,9 @@ export function WorkflowNav({
                     </SidebarMenuItem>
                   </SidebarMenu>
                   <SidebarSeparator className="mx-0" />
-                  <SidebarMenu className="gap-y-0.5">{workflowItems}</SidebarMenu>
+                  <SidebarMenu className="gap-y-0.5">
+                    {workflowItems}
+                  </SidebarMenu>
                 </PopoverContent>
               </Popover>
             </SidebarMenuItem>

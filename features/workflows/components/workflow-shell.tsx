@@ -3,8 +3,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { Canvas } from "@/feature/workflows/components/canvas"
-import { RightSidebar } from "@/feature/workflows/components/right-sidebar"
+import { Canvas } from "@/features/workflows/components/canvas"
+import { RightSidebar } from "@/features/workflows/components/right-sidebar"
 
 export function WorkflowShell({ workflowId }: { workflowId: string }) {
   return (

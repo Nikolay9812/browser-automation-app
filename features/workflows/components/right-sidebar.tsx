@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { runWorkflowAction } from "@/feature/workflows/actions"
+import { runWorkflowAction } from "@/features/workflows/actions"
 import type { helloWorldTask } from "@/trigger/example"
 
 type RunHandle = Awaited<ReturnType<typeof runWorkflowAction>>
@@ -39,7 +39,7 @@ export function RightSidebar() {
   }
 
   return (
-    <div className="flex size-full items-center justify-center flex-col gap-3 p-2">
+    <div className="flex size-full flex-col items-center justify-center gap-3 p-2">
       <Button onClick={handleRun} disabled={isRunning}>
         {isRunning ? <Spinner /> : <PlayIcon />}
         Run
@@ -50,7 +50,11 @@ export function RightSidebar() {
             <span className="text-muted-foreground">Status</span>
             <Badge
               variant={
-                run?.isFailed ? "destructive" : run?.isSuccess ? "default" : "secondary"
+                run?.isFailed
+                  ? "destructive"
+                  : run?.isSuccess
+                    ? "default"
+                    : "secondary"
               }
             >
               {run?.status ?? "PENDING"}
