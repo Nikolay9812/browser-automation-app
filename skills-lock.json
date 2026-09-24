@@ -49,6 +49,12 @@
       "skillPath": "skills/core/clerk-setup/SKILL.md",
       "computedHash": "5152ddb16d1a3b97e74ba3751142a7aeea677d4ce13333bdcf263808dece2d01"
     },
+    "liveblocks-best-practices": {
+      "source": "liveblocks/skills",
+      "sourceType": "github",
+      "skillPath": "skills/liveblocks-best-practices/SKILL.md",
+      "computedHash": "df4f54f66e81c580d25c5fee989768368837df694ab63c0f4a0fd70500cd16af"
+    },
     "neon": {
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
