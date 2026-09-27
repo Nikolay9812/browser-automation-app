@@ -1,29 +1,27 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
 
-import { liveblocks } from "@/lib/liveblock"
+import { liveblocks } from "@/lib/liveblocks"
 
 export async function POST() {
   const { userId, orgId } = await auth()
-  if (!userId) {
+
+  if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 })
   }
 
   const user = await currentUser()
+
   if (!user) {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const name =
-    user.fullName ??
-    user.username ??
-    user.primaryEmailAddress?.emailAddress ??
-    "Anonymous"
-
-  // Rooms grant access to the org via `groupsAccesses: { [orgId]: [...] }`
+  // Identify the user with an ID token. Permissions are resolved per-room
+  // from the user's groups — scope access to their Clerk organization.
   const { status, body } = await liveblocks.identifyUser(
     {
       userId,
-      groupIds: orgId ? [orgId] : [],
+      groupIds: [orgId],
+      organizationId: orgId,
     },
     {
       userInfo: {
