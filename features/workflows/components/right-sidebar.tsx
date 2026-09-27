@@ -172,7 +172,10 @@ function Palette() {
     const nodes = getNodes()
 
     // Only one trigger is allowed — a workflow has a single entry point.
-    if (def.kind === "trigger" && nodes.some((n) => n.data.kind === "trigger")) {
+    if (
+      def.kind === "trigger" &&
+      nodes.some((n) => n.data.kind === "trigger")
+    ) {
       toast.error("A workflow can only have one trigger.")
       return
     }
@@ -290,7 +293,8 @@ export function RightSidebar() {
   const [tab, setTab] = useState("toolbar")
 
   // TODO: read the currently selected node from React Flow.
-  const selected: StepNodeType | undefined = undefined
+  const selected = useStore((s) => s.nodes.find((n) => n.selected)) as
+    StepNodeType | undefined
 
   // TODO: auto-switch to the Editor tab when the selection changes.
 
