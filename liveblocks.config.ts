@@ -1,6 +1,6 @@
 declare global {
   interface Liveblocks {
-    UseMeta: {
+    UserMeta: {
       id: string
       info: {
         name: string
