@@ -155,7 +155,7 @@ task code is never bundled into your app. Trigger by id, not by calling the task
 
 ```ts
 import { tasks } from "@trigger.dev/sdk";
-import type { helloWorld } from "@/trigger/example"; // type-only
+
 
 const handle = await tasks.trigger<typeof helloWorld>("hello-world", { name: "Ada" });
 ```
@@ -190,7 +190,6 @@ See the manual setup docs for full Turborepo examples before scaffolding either.
    - Correct: `export const ... = task({ ... })` in a file under a `dirs` path.
 
 5. **Importing the task instance into backend code.** This bundles the task.
-   - Wrong: `import { helloWorld } from "@/trigger/example"` in a route handler.
    - Correct: `import type { helloWorld }` plus `tasks.trigger<typeof helloWorld>("hello-world", payload)`.
 
 6. **Forgetting `TRIGGER_SECRET_KEY`.** Triggering from your app fails without it; the
