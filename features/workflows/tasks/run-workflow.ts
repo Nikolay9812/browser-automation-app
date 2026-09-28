@@ -1,6 +1,11 @@
 import toposort from "toposort"
 import { logger, task } from "@trigger.dev/sdk"
-
+import {
+  browserbase,
+  Stagehand,
+  type StagehandBrowser,
+} from "@browserbasehq/stagehand"
+import { nodeExecutors } from "@/features/workflows/nodes/node-executors"
 import { getWorkflow } from "@/features/workflows/data"
 
 // The Trigger.dev task the Run button fires. It loads the saved graph, works out
@@ -28,11 +33,37 @@ export const runWorkflowTask = task({
 
     logger.log(`Running workflow ${workflow.name}`, { steps: order.length })
 
-    for (const id of order) {
-      const node = byId.get(id)!
-      logger.log(`Running step: ${node.data.title}`)
-      // TODO: actually execute the node instead of just logging it, and report
-      // its progress so the UI can watch the run live.
+    // The run owns one Browserbase session, opened lazily on the first browser step
+    // and reused by every later one, so the recording spans the whole flow. The
+    // LLM routes through Browserbase's Model Gateway (BROWSERBASE_API_KEY), so no
+    // separate provider key is needed.
+    let browser: StagehandBrowser | undefined
+    let stagehand: Stagehand | undefined
+    const getStagehand = async () => {
+      if (stagehand) return stagehand
+      browser = await browserbase.launch({
+        apiKey: process.env.BROWSERBASE_API_KEY!,
+      })
+      stagehand = await Stagehand.create({
+        browser,
+        model: { modelName: "google/gemini-2.5-flash" },
+      })
+      return stagehand
+    }
+
+    // Close Stagehand before its browser, even when a step throws, so the
+    // Browserbase session doesn't linger.
+    try {
+      for (const id of order) {
+        const node = byId.get(id)!
+        logger.log(`Running step: ${node.data.title}`)
+        // TODO: report each node's progress so the UI can watch the run live.
+        const executor = nodeExecutors[node.data.type]
+        if (executor) await executor({ values: node.data.values, getStagehand })
+      }
+    } finally {
+      await stagehand?.close()
+      await browser?.close()
     }
 
     return { steps: order.length }
