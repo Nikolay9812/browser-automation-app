@@ -6,6 +6,7 @@ import {
   type StagehandBrowser,
 } from "@browserbasehq/stagehand"
 import { nodeExecutors } from "@/features/workflows/nodes/node-executors"
+import { interpolate, type NodeOutputs } from "@/features/workflows/lib/interpolate"
 import { getWorkflow } from "@/features/workflows/data"
 
 // The Trigger.dev task the Run button fires. It loads the saved graph, works out
@@ -53,13 +54,26 @@ export const runWorkflowTask = task({
 
     // Close Stagehand before its browser, even when a step throws, so the
     // Browserbase session doesn't linger.
+    // Each node's result, keyed by its id. Nodes run in dependency order, so
+    // anything a node references has already landed here by its turn.
+    const outputs: NodeOutputs = {}
+
     try {
       for (const id of order) {
         const node = byId.get(id)!
         logger.log(`Running step: ${node.data.title}`)
         // TODO: report each node's progress so the UI can watch the run live.
         const executor = nodeExecutors[node.data.type]
-        if (executor) await executor({ values: node.data.values, getStagehand })
+        if (!executor) continue
+
+        // Fill `{{ nodeId.path }}` placeholders with upstream outputs.
+        const values = Object.fromEntries(
+          Object.entries(node.data.values).map(([key, text]) => [
+            key,
+            interpolate({ text, outputs }),
+          ])
+        )
+        outputs[id] = await executor({ values, getStagehand })
       }
     } finally {
       await stagehand?.close()
