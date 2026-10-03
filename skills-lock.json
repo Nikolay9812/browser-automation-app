@@ -66,6 +66,12 @@
       "sourceType": "github",
       "skillPath": "skills/neon-postgres/SKILL.md",
       "computedHash": "ac5522830f97d16b0645da7a79d4b21d75e4ac7edfbfa32f7d051ad1dcbc60b9"
+    },
+    "resend": {
+      "source": "resend/resend-skills",
+      "sourceType": "github",
+      "skillPath": "skills/resend/SKILL.md",
+      "computedHash": "0194220da27c86668d1c18e66e765be5b30b4a946d501c67cecda904595ee9bf"
     }
   }
 }
