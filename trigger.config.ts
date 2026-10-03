@@ -18,8 +18,15 @@ export default defineConfig({
   },
   dirs: ["features"],
   build: {
-    // Stagehand resolves its extension zip relative to its own file, so it must
-    // load from node_modules rather than be bundled.
-    external: ["@browserbasehq/stagehand"],
+    // Load these from node_modules rather than bundling them. Stagehand's logger,
+    // pino, starts its transports in a worker thread (thread-stream) that
+    // resolves lib/worker.js relative to its own file, which breaks once bundled.
+    external: [
+      "@browserbasehq/stagehand",
+      "pino",
+      "pino-pretty",
+      "pino-abstract-transport",
+      "thread-stream",
+    ],
   },
 })

@@ -7,8 +7,8 @@ export async function openUrl({
   stagehand: Stagehand
   url: string
 }) {
-  const [page] = await stagehand.browser.context.pages()
-  await page.goto(url, { waitUntil: "load", timeout: 30_000 })
+  const [page] = stagehand.context.pages()
+  await page.goto(url, { waitUntil: "load", timeoutMs: 30_000 })
 
-  return { url: await page.url(), title: await page.title() }
+  return { url: page.url(), title: await page.title() }
 }

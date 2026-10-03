@@ -1,10 +1,6 @@
 import toposort from "toposort"
 import { logger, metadata, task } from "@trigger.dev/sdk"
-import {
-  browserbase,
-  Stagehand,
-  type StagehandBrowser,
-} from "@browserbasehq/stagehand"
+import { Stagehand } from "@browserbasehq/stagehand"
 import { nodeExecutors } from "@/features/workflows/nodes/node-executors"
 import {
   interpolate,
@@ -61,25 +57,22 @@ export const runWorkflowTask = task({
     publishSteps()
 
     // The run owns one Browserbase session, opened lazily on the first browser step
-    // and reused by every later one, so the recording spans the whole flow. The
-    // LLM routes through Browserbase's Model Gateway (BROWSERBASE_API_KEY), so no
-    // separate provider key is needed.
-    let browser: StagehandBrowser | undefined
+    // and reused by every later one, so the recording spans the whole flow.
+    // Stagehand reads the Gemini key from GEMINI_API_KEY (or
+    // GOOGLE_GENERATIVE_AI_API_KEY).
     let stagehand: Stagehand | undefined
     const getStagehand = async () => {
       if (stagehand) return stagehand
-      browser = await browserbase.launch({
+      const instance = new Stagehand({
+        env: "BROWSERBASE",
         apiKey: process.env.BROWSERBASE_API_KEY!,
+        model: "google/gemini-2.5-flash",
       })
-      stagehand = await Stagehand.create({
-        browser,
-        model: { modelName: "google/gemini-2.5-flash" },
-      })
+      await instance.init()
+      stagehand = instance
       return stagehand
     }
 
-    // Close Stagehand before its browser, even when a step throws, so the
-    // Browserbase session doesn't linger.
     // Each node's result, keyed by its id. Nodes run in dependency order, so
     // anything a node references has already landed here by its turn.
     const outputs: NodeOutputs = {}
@@ -119,8 +112,9 @@ export const runWorkflowTask = task({
         setStatus(index, "done")
       }
     } finally {
+      // Ends the Browserbase session too, even when a step throws, so it
+      // doesn't linger.
       await stagehand?.close()
-      await browser?.close()
     }
 
     // Returned so a successful run's finished state is guaranteed, even if the

@@ -1,5 +1,13 @@
 import type { Node } from "@xyflow/react"
-import { Globe, MousePointerClick, type LucideIcon } from "lucide-react"
+import {
+  Bot,
+  Globe,
+  Hand,
+  MousePointerClick,
+  ScanSearch,
+  ScanText,
+  type LucideIcon,
+} from "lucide-react"
 
 export type StepNodeKind = "trigger" | "action"
 
@@ -56,6 +64,91 @@ export const nodeRegistry = {
     outputs: [
       { path: "url", label: "URL" },
       { path: "title", label: "Title" },
+    ],
+  },
+  act: {
+    type: "act",
+    kind: "action",
+    label: "Act",
+    icon: Hand,
+    accent: "bg-violet-500 text-white",
+    fields: [
+      {
+        key: "instruction",
+        label: "Instruction",
+        placeholder: "Click the sign in button",
+        multiline: true,
+        required: true,
+      },
+    ],
+    outputs: [
+      { path: "success", label: "Success" },
+      { path: "message", label: "Message" },
+      { path: "url", label: "URL" },
+    ],
+  },
+  extract: {
+    type: "extract",
+    kind: "action",
+    label: "Extract",
+    icon: ScanText,
+    accent: "bg-amber-500 text-white",
+    fields: [
+      {
+        key: "instruction",
+        label: "Instruction",
+        placeholder: "Extract the title and price of the first product",
+        multiline: true,
+        required: true,
+      },
+    ],
+    outputs: [
+      { path: "extraction", label: "Extraction" },
+      { path: "url", label: "URL" },
+    ],
+  },
+  observe: {
+    type: "observe",
+    kind: "action",
+    label: "Observe",
+    icon: ScanSearch,
+    accent: "bg-sky-500 text-white",
+    fields: [
+      {
+        key: "instruction",
+        label: "Instruction",
+        placeholder: "Find the add to cart buttons",
+        multiline: true,
+        required: true,
+      },
+    ],
+    outputs: [
+      { path: "matches", label: "Matches" },
+      { path: "matches[0].selector", label: "First match selector" },
+      { path: "matches[0].description", label: "First match description" },
+      { path: "count", label: "Match count" },
+      { path: "url", label: "URL" },
+    ],
+  },
+  agent: {
+    type: "agent",
+    kind: "action",
+    label: "Agent",
+    icon: Bot,
+    accent: "bg-rose-500 text-white",
+    fields: [
+      {
+        key: "instruction",
+        label: "Instruction",
+        placeholder: "Search for the stock price of NVDA",
+        multiline: true,
+        required: true,
+      },
+    ],
+    outputs: [
+      { path: "success", label: "Success" },
+      { path: "message", label: "Message" },
+      { path: "completed", label: "Completed" },
     ],
   },
 } satisfies Record<string, NodeDefinition>
