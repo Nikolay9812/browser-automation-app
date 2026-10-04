@@ -7,12 +7,54 @@ import {
   type NodeOutputs,
 } from "@/features/workflows/lib/interpolate"
 import { getWorkflow } from "@/features/workflows/data"
+import type { NodeType } from "@/features/workflows/nodes/node-registry"
+
+// Plain JSON, the only shape run metadata can carry.
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | Json[]
+  | { [key: string]: Json }
 
 // One entry per node the run will execute, published to the run's metadata under
-// "steps" so the canvas can show each node's live status.
+// "steps" so the canvas can show each node's live status and the console can show
+// what each step did. The node's type and title are snapshotted so past runs still
+// render after the node is renamed or deleted.
 export type RunStep = {
   nodeId: string
+  nodeType: NodeType
+  title: string
   status: "pending" | "running" | "done" | "failed"
+  // Epoch ms, set when the step starts running.
+  startedAt?: number
+  // Set once the step finishes, whether done or failed.
+  durationMs?: number
+  // What the executor returned, as JSON, set when the step is done.
+  output?: Json
+  // True when the output was too large for run metadata, in which case `output`
+  // holds its clipped JSON string instead of the real value.
+  outputTruncated?: boolean
+  // The thrown error's message, set when the step failed.
+  error?: string
+}
+
+// Run metadata is capped at 256KB and the SDK throws past it, so one oversized
+// output must not take down the whole run.
+const MAX_OUTPUT_CHARS = 16_000
+
+// Round-trips the output through JSON so the step holds exactly what the console
+// will receive, clipping it when it's too big to publish.
+function toStepOutput(
+  output: unknown
+): Pick<RunStep, "output" | "outputTruncated"> {
+  const json = JSON.stringify(output)
+  if (json === undefined) return {}
+  if (json.length > MAX_OUTPUT_CHARS) {
+    return { output: json.slice(0, MAX_OUTPUT_CHARS), outputTruncated: true }
+  }
+  return { output: JSON.parse(json) as Json }
 }
 
 // The Trigger.dev task the Run button fires. It loads the saved graph, works out
@@ -40,18 +82,18 @@ export const runWorkflowTask = task({
 
     logger.log(`Running workflow ${workflow.name}`, { steps: order.length })
 
-    // Every step starts pending and is re-published on each status change.
-    const steps: RunStep[] = order.map((nodeId) => ({
-      nodeId,
-      status: "pending",
-    }))
+    // Every step starts pending and is re-published on each change.
+    const steps: RunStep[] = order.map((nodeId) => {
+      const { type, title } = byId.get(nodeId)!.data
+      return { nodeId, nodeType: type, title, status: "pending" }
+    })
     const publishSteps = () =>
       metadata.set(
         "steps",
         steps.map((step) => ({ ...step }))
       )
-    const setStatus = (index: number, status: RunStep["status"]) => {
-      steps[index] = { ...steps[index], status }
+    const updateStep = (index: number, patch: Partial<RunStep>) => {
+      steps[index] = { ...steps[index], ...patch }
       publishSteps()
     }
     publishSteps()
@@ -84,13 +126,18 @@ export const runWorkflowTask = task({
         const executor = nodeExecutors[node.data.type]
         // Nothing to execute — mark it done rather than leaving it pending.
         if (!executor) {
-          setStatus(index, "done")
+          updateStep(index, {
+            status: "done",
+            startedAt: Date.now(),
+            durationMs: 0,
+          })
           continue
         }
 
         // Flush now: otherwise "done" overwrites "running" before the
         // background flush ever pushes it, and the canvas never shows a spinner.
-        setStatus(index, "running")
+        const startedAt = Date.now()
+        updateStep(index, { status: "running", startedAt })
         await metadata.flush()
 
         try {
@@ -105,11 +152,19 @@ export const runWorkflowTask = task({
         } catch (error) {
           // A thrown run returns no output, so the flushed metadata is the only
           // way the failed state reaches the canvas.
-          setStatus(index, "failed")
+          updateStep(index, {
+            status: "failed",
+            durationMs: Date.now() - startedAt,
+            error: error instanceof Error ? error.message : String(error),
+          })
           await metadata.flush()
           throw error
         }
-        setStatus(index, "done")
+        updateStep(index, {
+          status: "done",
+          durationMs: Date.now() - startedAt,
+          ...toStepOutput(outputs[id]),
+        })
       }
     } finally {
       // Ends the Browserbase session too, even when a step throws, so it
