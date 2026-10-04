@@ -11,12 +11,7 @@ import type { NodeType } from "@/features/workflows/nodes/node-registry"
 
 // Plain JSON, the only shape run metadata can carry.
 export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | Json[]
-  | { [key: string]: Json }
+  string | number | boolean | null | Json[] | { [key: string]: Json }
 
 // One entry per node the run will execute, published to the run's metadata under
 // "steps" so the canvas can show each node's live status and the console can show
@@ -103,15 +98,22 @@ export const runWorkflowTask = task({
     // Stagehand reads the Gemini key from GEMINI_API_KEY (or
     // GOOGLE_GENERATIVE_AI_API_KEY).
     let stagehand: Stagehand | undefined
+    // The session's id, kept so the run's recording can be replayed. Unset when
+    // no step needed a browser.
+    let sessionId: string | undefined
     const getStagehand = async () => {
       if (stagehand) return stagehand
       const instance = new Stagehand({
         env: "BROWSERBASE",
         apiKey: process.env.BROWSERBASE_API_KEY!,
         model: "google/gemini-2.5-flash",
+        // Tags the session with its org so the replay route can check who may
+        // watch it.
+        browserbaseSessionCreateParams: { userMetadata: { orgId } },
       })
       await instance.init()
       stagehand = instance
+      sessionId = instance.browserbaseSessionID
       return stagehand
     }
 
@@ -173,7 +175,9 @@ export const runWorkflowTask = task({
     }
 
     // Returned so a successful run's finished state is guaranteed, even if the
-    // last background flush hasn't landed.
-    return { steps }
+    // last background flush hasn't landed. The session id rides along here
+    // rather than in metadata: its recording is only ready once the session has
+    // closed.
+    return { steps, sessionId }
   },
 })

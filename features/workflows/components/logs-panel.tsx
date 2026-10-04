@@ -1,5 +1,6 @@
 "use client"
 
+import { PlayIcon } from "lucide-react"
 import prettyMs from "pretty-ms"
 
 import { cn } from "@/lib/utils"
@@ -9,8 +10,25 @@ import type { WorkflowRun } from "@/features/workflows/components/workflow-runs-
 import { nodeRegistry } from "@/features/workflows/nodes/node-registry"
 import type { RunStep } from "@/features/workflows/tasks/run-workflow"
 
-// A step within a run, the unit the console selects.
-export type StepSelection = { runId: string; nodeId: string }
+// What the console has selected: one step of a run, or a whole run's replay.
+export type ConsoleSelection =
+  | { type: "step"; runId: string; nodeId: string }
+  | { type: "replay"; runId: string }
+
+export function isSameSelection(a: ConsoleSelection, b: ConsoleSelection) {
+  if (a.type === "step" && b.type === "step") {
+    return a.runId === b.runId && a.nodeId === b.nodeId
+  }
+  return a.type === b.type && a.runId === b.runId
+}
+
+// A run's recording exists only once the run has finished, and only when a
+// step opened a browser.
+export function hasReplay(
+  run: WorkflowRun
+): run is WorkflowRun & { sessionId: string } {
+  return run.sessionId !== undefined && !run.isLive
+}
 
 // Trigger.dev's run statuses are SCREAMING_CASE ("COMPLETED", "TIMED_OUT").
 function formatStatus(status: string) {
@@ -69,15 +87,43 @@ function StepRow({
   )
 }
 
-// Every run of the workflow, newest first, each followed by its steps.
+// The row for a run's recording, styled like a step row but standing for the
+// whole run.
+function ReplayRow({
+  isSelected,
+  onClick,
+}: {
+  isSelected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isSelected}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+        isSelected && "bg-accent text-accent-foreground"
+      )}
+    >
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted">
+        <PlayIcon className="size-3.5" />
+      </span>
+      <span className="truncate font-medium">Replay</span>
+    </button>
+  )
+}
+
+// Every run of the workflow, newest first, each followed by its steps and,
+// once it has a recording, a row to replay it.
 export function LogsPanel({
   runs,
   selected,
   onSelect,
 }: {
   runs: WorkflowRun[]
-  selected: StepSelection | null
-  onSelect: (selection: StepSelection) => void
+  selected: ConsoleSelection | null
+  onSelect: (selection: ConsoleSelection) => void
 }) {
   if (runs.length === 0) {
     return <p className="p-3 text-sm text-muted-foreground">No runs yet</p>
@@ -107,11 +153,23 @@ export function LogsPanel({
               step={step}
               isLive={run.isLive}
               isSelected={
-                selected?.runId === run.id && selected.nodeId === step.nodeId
+                selected?.type === "step" &&
+                selected.runId === run.id &&
+                selected.nodeId === step.nodeId
               }
-              onClick={() => onSelect({ runId: run.id, nodeId: step.nodeId })}
+              onClick={() =>
+                onSelect({ type: "step", runId: run.id, nodeId: step.nodeId })
+              }
             />
           ))}
+          {hasReplay(run) && (
+            <ReplayRow
+              isSelected={
+                selected?.type === "replay" && selected.runId === run.id
+              }
+              onClick={() => onSelect({ type: "replay", runId: run.id })}
+            />
+          )}
         </section>
       ))}
     </div>

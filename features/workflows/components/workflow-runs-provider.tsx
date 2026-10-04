@@ -32,6 +32,9 @@ export type WorkflowRun = Pick<
   // Still queued or executing.
   isLive: boolean
   steps: RunStep[]
+  // The Browserbase session the run drove, for replaying its recording. Set
+  // only once the run has finished successfully and a step opened a browser.
+  sessionId?: string
   // Why the run failed, when it failed outside a step (e.g. a cycle in the graph).
   error?: string
 }
@@ -50,6 +53,7 @@ function toWorkflowRun(run: RealtimeRun): WorkflowRun {
     isLive: run.isQueued || run.isExecuting,
     steps:
       run.output?.steps ?? (run.metadata?.steps as RunStep[] | undefined) ?? [],
+    sessionId: run.output?.sessionId,
     error: run.error?.message,
   }
 }
