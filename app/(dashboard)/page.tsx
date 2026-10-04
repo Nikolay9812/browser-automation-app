@@ -9,6 +9,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { createWorkflowAction } from "@/features/workflows/actions"
+import { generateSlug } from "@/features/workflows/lib/generate-slug"
 
 export default function Page() {
   return (
@@ -23,10 +25,17 @@ export default function Page() {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button>
-          <PlusIcon />
-          New workflow
-        </Button>
+        <form
+          action={async () => {
+            "use server"
+            await createWorkflowAction(generateSlug())
+          }}
+        >
+          <Button type="submit">
+            <PlusIcon />
+            New workflow
+          </Button>
+        </form>
       </EmptyContent>
     </Empty>
   )

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useReactFlow, useStore } from "@xyflow/react"
-import { Lock, MoreHorizontal, Play, Trash2 } from "lucide-react"
+import { Lock, MoreHorizontal, Play, Square, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -25,8 +25,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
-import { deleteWorkflowAction, runWorkflowAction } from "@/features/workflows/actions"
+import {
+  cancelWorkflowRunAction,
+  deleteWorkflowAction,
+  runWorkflowAction,
+} from "@/features/workflows/actions"
 import { NodeIcon } from "@/features/workflows/components/node-icon"
+import { useWorkflowRuns } from "@/features/workflows/components/workflow-runs-provider"
 import { useProPlan } from "@/features/workflows/hooks/use-pro-plan"
 import {
   useUpstreamConnections,
@@ -385,10 +390,34 @@ function ActionsMenu({ workflowId }: { workflowId: string }) {
   )
 }
 
-// Kicks off a run of the current workflow.
+// Kicks off a run of the current workflow, or stops the one in flight. At most
+// one run is live at a time.
 function RunButton({ workflowId }: { workflowId: string }) {
   const { getNodes, getEdges } = useReactFlow<StepNodeType>()
+  const liveRun = useWorkflowRuns().find((run) => run.isLive)
   const [isPending, startTransition] = useTransition()
+
+  if (liveRun) {
+    return (
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={isPending}
+        onClick={() => {
+          startTransition(async () => {
+            try {
+              await cancelWorkflowRunAction(liveRun.id)
+            } catch {
+              toast.error("Couldn't stop the run.")
+            }
+          })
+        }}
+      >
+        <Square fill="primary" />
+        Stop
+      </Button>
+    )
+  }
 
   return (
     <Button
@@ -396,7 +425,6 @@ function RunButton({ workflowId }: { workflowId: string }) {
       variant="secondary"
       disabled={isPending}
       onClick={() => {
-        // TODO: validate the graph and run the workflow (toggle to Stop while running).
         const graph = { nodes: getNodes(), edges: getEdges() }
         const problems = validateGraph(graph)
         if (problems.length > 0) {
