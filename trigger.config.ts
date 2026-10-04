@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node"
 import { defineConfig } from "@trigger.dev/sdk"
 
 export default defineConfig({
@@ -17,6 +18,23 @@ export default defineConfig({
     },
   },
   dirs: ["features"],
+  init: async ({ ctx }) => {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      // Trigger.dev owns the OpenTelemetry setup; Sentry's default
+      // integrations would conflict with it.
+      defaultIntegrations: false,
+      environment: ctx.environment.type.toLowerCase(),
+    })
+  },
+  // Runs once a run has exhausted its retries.
+  onFailure: async ({ error, ctx }) => {
+    Sentry.captureException(error, {
+      tags: { task: ctx.task.id, environment: ctx.environment.type },
+      extra: { runId: ctx.run.id, attempt: ctx.attempt.number },
+    })
+    await Sentry.flush(2000)
+  },
   build: {
     // Load these from node_modules rather than bundling them. Stagehand's logger,
     // pino, starts its transports in a worker thread (thread-stream) that
