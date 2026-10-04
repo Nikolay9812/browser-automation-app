@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { AlertTriangleIcon, RotateCwIcon } from "lucide-react"
+import * as Sentry from "@sentry/nextjs"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,7 @@ export default function Error({
   retry: () => void
 }) {
   useEffect(() => {
-    console.error(error)
+    Sentry.captureException(error)
   }, [error])
 
   return (

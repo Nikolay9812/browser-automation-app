@@ -1,4 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
+import * as Sentry from "@sentry/nextjs"
 
 import { liveblocks } from "@/lib/liveblocks"
 
@@ -34,6 +35,15 @@ export async function POST() {
       },
     }
   )
+
+  // A failure here leaves the canvas unable to connect to its room.
+  if (status >= 400) {
+    Sentry.logger.error("Liveblocks identifyUser failed", {
+      "http.response.status_code": status,
+      "org.id": orgId,
+      "user.id": userId,
+    })
+  }
 
   return new Response(body, { status })
 }

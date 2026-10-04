@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Hls from "hls.js"
+import * as Sentry from "@sentry/nextjs"
 
 import { Spinner } from "@/components/ui/spinner"
 
@@ -44,6 +45,19 @@ export function SessionReplay({ sessionId }: { sessionId: string }) {
     const settle = (status: ReplayStatus) => {
       if (!signal.aborted) setResult({ sessionId, status })
     }
+    // Records why the replay couldn't be shown, then shows the failed state.
+    const fail = (
+      reason: string,
+      attributes: Record<string, string | number> = {}
+    ) => {
+      if (signal.aborted) return
+      Sentry.logger.warn("Session replay failed to load", {
+        "browserbase.session.id": sessionId,
+        "replay.failure_reason": reason,
+        ...attributes,
+      })
+      settle("failed")
+    }
     let hls: Hls | undefined
 
     const waitForPlaylist = async () => {
@@ -51,9 +65,13 @@ export function SessionReplay({ sessionId }: { sessionId: string }) {
       while (Date.now() < deadline) {
         const response = await fetch(src, { signal, cache: "no-store" })
         if (response.ok) return true
-        if (response.status !== 404 && response.status !== 429) return false
+        if (response.status !== 404 && response.status !== 429) {
+          fail("http_error", { "http.response.status_code": response.status })
+          return false
+        }
         await sleep(POLL_INTERVAL_MS, signal)
       }
+      fail("timeout", { "replay.timeout_ms": POLL_TIMEOUT_MS })
       return false
     }
 
@@ -61,7 +79,12 @@ export function SessionReplay({ sessionId }: { sessionId: string }) {
       if (Hls.isSupported()) {
         hls = new Hls()
         hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) settle("failed")
+          if (data.fatal) {
+            fail("hls_fatal", {
+              "hls.error.type": data.type,
+              "hls.error.details": data.details,
+            })
+          }
         })
         hls.loadSource(src)
         hls.attachMedia(video)
@@ -69,15 +92,17 @@ export function SessionReplay({ sessionId }: { sessionId: string }) {
         // Safari plays HLS natively.
         video.src = src
       } else {
-        settle("failed")
+        fail("unsupported_browser")
         return
       }
       settle("ready")
     }
 
     waitForPlaylist()
-      .then((ready) => (ready ? play() : settle("failed")))
-      .catch(() => settle("failed"))
+      .then((ready) => {
+        if (ready) play()
+      })
+      .catch(() => fail("fetch_error"))
 
     return () => {
       controller.abort()

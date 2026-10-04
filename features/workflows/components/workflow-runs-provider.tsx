@@ -11,6 +11,7 @@ import {
 } from "react"
 import type { RealtimeRun as AnyTaskRealtimeRun } from "@trigger.dev/sdk"
 import { useApiClient } from "@trigger.dev/react-hooks"
+import * as Sentry from "@sentry/nextjs"
 
 import type {
   RunStep,
@@ -99,7 +100,12 @@ export function WorkflowRunsProvider({
     const controller = new AbortController()
     subscribe(controller.signal).catch((error: unknown) => {
       if (controller.signal.aborted) return
-      console.error("Workflow runs subscription failed", error)
+      // The canvas stops receiving live run updates until the page reloads.
+      Sentry.logger.error("Workflow runs subscription failed", {
+        "workflow.id": workflowId,
+        "error.type": error instanceof Error ? error.name : typeof error,
+        "error.message": error instanceof Error ? error.message : String(error),
+      })
     })
     return () => controller.abort()
   }, [tag, accessToken])

@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { APIError } from "@browserbasehq/sdk"
+import * as Sentry from "@sentry/nextjs"
 
 import { browserbase } from "@/lib/browserbase"
 
@@ -29,6 +30,11 @@ export async function GET(
     // is reported as missing rather than forbidden, so ids can't be probed.
     const session = await browserbase.sessions.retrieve(sessionId)
     if (session.userMetadata?.orgId !== orgId) {
+      // A real session owned by another org: either a stale link or probing.
+      Sentry.logger.warn("Replay requested for another org's session", {
+        "browserbase.session.id": sessionId,
+        "org.id": orgId,
+      })
       return new Response("Not found", { status: 404 })
     }
 
@@ -54,6 +60,14 @@ export async function GET(
       error instanceof APIError &&
       (error.status === 404 || error.status === 429)
     ) {
+      // 404 is the normal "still processing" answer the player polls through;
+      // only a rate limit is worth recording.
+      if (error.status === 429) {
+        Sentry.logger.warn("Browserbase rate-limited replay retrieval", {
+          "browserbase.session.id": sessionId,
+          "org.id": orgId,
+        })
+      }
       return new Response(error.message, { status: error.status })
     }
     throw error
