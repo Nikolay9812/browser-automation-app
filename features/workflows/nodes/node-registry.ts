@@ -34,6 +34,7 @@ export type NodeDefinition = {
   label: string
   icon: LucideIcon
   accent: string // Tailwind classes for the icon chip color
+  premium?: boolean // only orgs on the Pro plan can add it to the canvas
   fields: NodeField[]
   outputs: NodeOutput[]
 }
@@ -137,6 +138,7 @@ export const nodeRegistry = {
     label: "Agent",
     icon: Bot,
     accent: "bg-rose-500 text-white",
+    premium: true,
     fields: [
       {
         key: "instruction",

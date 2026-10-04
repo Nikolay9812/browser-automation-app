@@ -13,8 +13,14 @@ export async function GET(
   _request: Request,
   ctx: RouteContext<"/api/replays/[sessionId]">
 ) {
-  const { orgId } = await auth()
+  const { orgId, has } = await auth()
   if (!orgId) return new Response("Unauthorized", { status: 401 })
+
+  // Session replay is a Pro feature. The `org:` scope matches only the active
+  // org's subscription. 403, not 404, so the player stops polling.
+  if (!has({ plan: "org:pro" })) {
+    return new Response("Session replay requires the Pro plan", { status: 403 })
+  }
 
   const { sessionId } = await ctx.params
 

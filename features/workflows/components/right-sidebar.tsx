@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useReactFlow, useStore } from "@xyflow/react"
-import { MoreHorizontal, Play, Trash2 } from "lucide-react"
+import { Lock, MoreHorizontal, Play, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -23,9 +23,11 @@ import { Label } from "@/components/ui/label"
 import { ResizablePanel } from "@/components/ui/resizable"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 
 import { deleteWorkflowAction, runWorkflowAction } from "@/features/workflows/actions"
 import { NodeIcon } from "@/features/workflows/components/node-icon"
+import { useProPlan } from "@/features/workflows/hooks/use-pro-plan"
 import {
   useUpstreamConnections,
   type UpstreamConnection,
@@ -247,13 +249,15 @@ const sections: { kind: StepNodeKind; label: string }[] = [
 ]
 
 // Every node type from the registry, filtered into the groups below.
-const definitions = Object.values(nodeRegistry)
+const definitions: NodeDefinition[] = Object.values(nodeRegistry)
 
-// The Toolbar tab: a button per node type that adds it to the canvas.
+// The Toolbar tab: a button per node type that adds it to the canvas. Premium
+// nodes are locked for orgs without Pro — clicking one goes to upgrade instead.
 function Palette() {
   // The shared React Flow store (lifted to a provider above the canvas and this
   // sidebar) lets us read the current nodes/viewport and add to them from here.
   const { getNodes, getViewport, addNodes } = useReactFlow<StepNodeType>()
+  const { isLoaded, isPro, upgrade } = useProPlan()
   // The pane's measured size, used to find the center of the current view.
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
@@ -309,17 +313,32 @@ function Palette() {
             <AccordionContent className="flex flex-col gap-0.5">
               {definitions
                 .filter((def) => def.kind === section.kind)
-                .map((def) => (
-                  <Button
-                    key={def.type}
-                    variant="ghost"
-                    onClick={() => add(def.type as NodeType)}
-                    className="justify-start gap-2.5 px-1.5 text-xs"
-                  >
-                    <NodeIcon type={def.type as NodeType} />
-                    {def.label}
-                  </Button>
-                ))}
+                .map((def) => {
+                  // Held as disabled, not locked, until Clerk loads, so Pro
+                  // orgs don't see the lock flash on.
+                  const locked = def.premium && isLoaded && !isPro
+                  return (
+                    <Button
+                      key={def.type}
+                      variant="ghost"
+                      disabled={def.premium && !isLoaded}
+                      title={locked ? "Upgrade to Pro to use this node" : undefined}
+                      onClick={() => (locked ? upgrade() : add(def.type as NodeType))}
+                      className="justify-start gap-2.5 px-1.5 text-xs"
+                    >
+                      <NodeIcon type={def.type as NodeType} />
+                      <span className={cn(locked && "text-muted-foreground")}>
+                        {def.label}
+                      </span>
+                      {locked && (
+                        <span className="ml-auto flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                          <Lock className="size-3" />
+                          Pro
+                        </span>
+                      )}
+                    </Button>
+                  )
+                })}
             </AccordionContent>
           </AccordionItem>
         ))}

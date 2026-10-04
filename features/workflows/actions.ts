@@ -13,6 +13,10 @@ import {
   deleteWorkflow,
   saveWorkflowGraph,
 } from "@/features/workflows/data"
+import {
+  nodeRegistry,
+  type NodeDefinition,
+} from "@/features/workflows/nodes/node-registry"
 import { WorkflowGraph } from "@/lib/db/schema"
 
 export async function createWorkflowAction(name: string) {
@@ -55,10 +59,24 @@ export async function runWorkflowAction({
   id: string
   graph: WorkflowGraph
 }) {
-  const { orgId } = await auth()
+  const { orgId, has } = await auth()
 
   if (!orgId) {
     throw new Error("No active organization")
+  }
+
+  // Premium nodes (the Agent) need the Pro plan. The toolbar only hides them,
+  // and a downgraded org can still have some on its canvas, so enforce it here
+  // before the graph is saved for the run task. The task itself has no auth
+  // context to check against. The `org:` scope matches only the org's plan.
+  const usesPremium = graph.nodes.some((node) => {
+    // The graph comes from the client, so its node types aren't guaranteed to
+    // be in the registry.
+    const def: NodeDefinition | undefined = nodeRegistry[node.data.type]
+    return def?.premium
+  })
+  if (usesPremium && !has({ plan: "org:pro" })) {
+    throw new Error("Agent nodes require the Pro plan")
   }
 
   await saveWorkflowGraph({ orgId, id, graph })
